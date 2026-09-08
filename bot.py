@@ -9,7 +9,7 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 
-from typing import Union, cast, Optional
+from typing import Union, cast
 
 #Init Bot Settings
 intents = discord.Intents.default()
@@ -796,7 +796,7 @@ lfg_group = app_commands.Group(name="lfg", description="Find teammates when you'
 
 @lfg_group.command(name="toggle", description="Toggle whether you're looking for a team (optionally list your skills)")
 @app_commands.describe(skills="Optional: skills/interests to show others (e.g. 'React, Python, UI design')")
-async def lfg_toggle(interaction: discord.Interaction, skills: Optional[app_commands.Range[str, None, 150]] = None):
+async def lfg_toggle(interaction: discord.Interaction, skills: app_commands.Range[str, None, 150] | None = None):
     """
     Toggles the user's "looking for a team" status in the LFG pool.
       - If not looking: adds them to the pool (blocked if they are already on a team).
@@ -810,6 +810,11 @@ async def lfg_toggle(interaction: discord.Interaction, skills: Optional[app_comm
     # Must be verified to participate
     if not records.is_verified(user.id):
         await interaction.followup.send(content="You need to verify first! Use the `/verify` command, then try again.")
+        return
+
+    # Only participants form teams (mentors and judges get verified too, but don't)
+    if not records.get_verified_user(user.id)['is_participant']:
+        await interaction.followup.send(content="You must be a participant to look for a group!")
         return
 
     # ------------- Toggle Logic --------------------
