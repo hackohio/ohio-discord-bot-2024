@@ -456,7 +456,7 @@ async def create_team(interaction: discord.Interaction, team_name: str, teammate
             case 0:
                 valid_members.append(mem)
 
-    if not valid_members:
+    if len(valid_members) < 1:
         await interaction.followup.send(ephemeral=True, content=f"Team creation failed - No teammates could be added. \nChoose a different teammate or reach out to them to fix their problem.")
         return
 
@@ -531,7 +531,7 @@ async def create_team(interaction: discord.Interaction, team_name: str, teammate
             inline=False
         )
     await text_channel.send(embed=welcome_embed)
-
+    
     # Add Author and Valid Teammates to team
     await perform_team_join(user, team_id)  # Add author to team
     records.set_team_lead(team_id, user.id) # Make author team_lead
@@ -578,6 +578,25 @@ async def leave_team(interaction: discord.Interaction): # TESTED
 
     # Delete team if no one is left
     if records.get_team_size(team_id) == 0: await handle_team_deletion(team_id); return
+
+    # Delete team if only one member remains
+    if records.get_team_size(team_id) == 1: 
+        await team_text_channel.send(embed=create_embed("Team Warning", 
+            "Your team currently only has **one member** remaining.\n\n"
+            "You have **10 minutes** to add another eligible teammate. "
+            "If your team still has only one member after 10 minutes, "
+            "the team will be automatically deleted."
+            )
+        )
+                
+        # Start the 10-minute grace period
+        await asyncio.sleep(600)
+
+        # check if team still has only one member
+        if records.get_team_size(team_id) == 1:
+            await handle_team_deletion(team_id)
+
+        return
 
     # If they were team lead, replace team_lead
     team_lead_id = team_data['team_lead']
